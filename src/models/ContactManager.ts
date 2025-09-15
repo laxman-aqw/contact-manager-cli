@@ -59,6 +59,69 @@ export class ContactManager implements IContact {
     }
   }
 
+  static async delete(
+    contact_id: string,
+    user_id: string,
+  ): Promise<IContact | null> {
+    try {
+      const result = await pool.query(
+        'DELETE FROM contacts WHERE contact_id = $1 and user_id = $2 returning *',
+        [contact_id, user_id],
+      )
+      if (result.rows.length === 0) {
+        console.log('Contact not found!')
+        return null
+      } else {
+        console.log('Contact deleted succesfully')
+        return result.rows[0]
+      }
+    } catch (error) {
+      console.log('Error deleting contact')
+      return null
+    }
+  }
+
+  static async deleteCLI(user_id: string) {
+    const contacts = await ContactManager.list(user_id)
+    if (contacts.length === 0) {
+      console.log('No contacts found')
+      return
+    }
+
+    const choices = contacts.map((c) => ({
+      name: `${c.first_name} ${c.last_name} (${c.contact_number})`,
+      value: c.contact_id,
+    }))
+
+    const { selectedContactId } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'selectedContactId',
+        message: 'Select contact to update',
+        choices,
+      },
+    ])
+    const contactToDelete = contacts.find(
+      (c) => c.contact_id === selectedContactId,
+    )
+
+    const { confirm } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: `Are you sure you want to delete ${contactToDelete?.first_name} ${contactToDelete?.last_name}`,
+        default: true,
+      },
+    ])
+
+    if (!confirm) {
+      console.log('Delettion cancelled')
+      return
+    }
+
+    await ContactManager.delete(selectedContactId!, user_id)
+  }
+
   static async update(
     contact_id: string,
     updates: Partial<IContact>,

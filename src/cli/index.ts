@@ -39,6 +39,7 @@ export async function main() {
           { name: 'Add Contact', value: 'add' },
           { name: 'List Contacts', value: 'list' },
           { name: 'Update Contact', value: 'update' },
+          { name: 'Delete Contact', value: 'delete' },
           { name: 'Exit', value: 'exit' },
         ],
       },
@@ -83,6 +84,9 @@ export async function main() {
 
     if (action === 'update') {
       await ContactManager.updateCLI(user.user_id!)
+    }
+    if (action === 'delete') {
+      await ContactManager.deleteCLI(user.user_id!)
     }
   }
 }
