@@ -4,12 +4,14 @@ import { pool } from '../db/index.js'
 import type { IUser } from '../models/types.js'
 import { ContactManager } from '../models/ContactManager.js'
 import { User } from '../models/User.js'
+import { validateUsername } from '../utils/userValidators.js'
 async function getUser(): Promise<IUser> {
   const { username } = await inquirer.prompt([
     {
       type: 'input',
       name: 'username',
       message: 'Enter your username:',
+      validate: validateUsername,
     },
   ])
 
@@ -17,12 +19,13 @@ async function getUser(): Promise<IUser> {
 
   if (result) {
     console.log(`[INFO] Welcome back, ${username}!`)
+    // console.log(result)
     return result
   }
 
   const insert = await User.addUser(username)
   if (!insert) throw new Error('Failed to create user')
-  console.log('New user created!')
+  console.log('New user created!', insert)
   return insert
 }
 

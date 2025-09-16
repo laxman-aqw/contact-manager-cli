@@ -164,7 +164,7 @@ export class ContactManager implements IContact {
       name: `${c.first_name} ${c.last_name} (${c.contact_number})`,
       value: c.contact_id,
     }))
-
+    choices.push({ name: 'cancel', value: 'cancel' })
     const { selectedContactId } = await inquirer.prompt([
       {
         type: 'list',
@@ -174,6 +174,7 @@ export class ContactManager implements IContact {
       },
     ])
 
+    if (selectedContactId === 'cancel') return null
     const contactToUpdate = contacts.find(
       (c) => c.contact_id === selectedContactId,
     )
