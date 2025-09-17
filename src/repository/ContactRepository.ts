@@ -69,13 +69,12 @@ export class ContactRepository {
       const result = await pool.query(query, [...values, contact_id, user_id])
       if (result.rows.length === 0) {
         console.log('Contact not found or does not belong to this user.')
-        return null
       }
+      console.clear()
       console.log('Contact Updated!')
       return result.rows[0]
     } catch (error) {
       console.error('Error updating contact:', error)
-      return null
     }
   }
 
@@ -87,7 +86,6 @@ export class ContactRepository {
       )
       if (result.rows.length === 0) {
         console.log('Contact not found!')
-        return null
       } else {
         console.log('Contact deleted succesfully')
         return result.rows[0]
