@@ -7,6 +7,7 @@ export class ContactManager implements IContact {
   first_name: string
   last_name: string
   contact_number: string
+  email: string
   address: string
   user_id: string
 
@@ -14,6 +15,7 @@ export class ContactManager implements IContact {
     first_name: string,
     last_name: string,
     contact_number: string,
+    email: string,
     address: string,
     user_id: string,
     contact_id?: string,
@@ -21,19 +23,56 @@ export class ContactManager implements IContact {
     this.first_name = first_name
     this.last_name = last_name
     this.contact_number = contact_number
+    this.email = email
     this.address = address
     this.user_id = user_id
     this.contact_id = contact_id
   }
 
-  async add() {
+  static async checkExistingEmailUser(email: string): Promise<boolean> {
+    const existingEmail = await pool.query(
+      'SELECT * FROM contacts WHERE email=$1',
+      [email],
+    )
+    if (existingEmail.rows.length > 0) {
+      console.log('Contact with this email already exist')
+      return true
+    }
+    return false
+  }
+  static async checkExistingContactUser(
+    contact_number: string,
+  ): Promise<boolean> {
+    const existingContact = await pool.query(
+      'SELECT * FROM contacts WHERE contact_number=$1',
+      [contact_number],
+    )
+    if (existingContact.rows.length > 0) {
+      console.log('Contact with this contact number already exist')
+      return true
+    }
+    return false
+  }
+
+  async add(): Promise<IContact | null> {
     try {
+      const contactExists = await ContactManager.checkExistingContactUser(
+        this.contact_number,
+      )
+      const emailExists = await ContactManager.checkExistingEmailUser(
+        this.email,
+      )
+      if (emailExists || contactExists) {
+        return null
+      }
+
       const result = await pool.query(
-        'INSERT INTO contacts (first_name, last_name, contact_number, address,user_id) VALUES ($1,$2,$3,$4, $5) RETURNING *',
+        'INSERT INTO contacts (first_name, last_name, contact_number,email, address,user_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
         [
           this.first_name,
           this.last_name,
           this.contact_number,
+          this.email,
           this.address,
           this.user_id,
         ],
@@ -76,50 +115,57 @@ export class ContactManager implements IContact {
         return result.rows[0]
       }
     } catch (error) {
-      console.log('Error deleting contact')
+      console.error('Error deleting contact', error)
       return null
     }
   }
 
-  static async deleteCLI(user_id: string) {
-    const contacts = await ContactManager.list(user_id)
-    if (contacts.length === 0) {
-      console.log('No contacts found')
-      return
+  static async deleteCLI(user_id: string): Promise<IContact | null> {
+    try {
+      const contacts = await ContactManager.list(user_id)
+      if (contacts.length === 0) {
+        console.log('No contacts found')
+        return null
+      }
+
+      const choices = contacts.map((c) => ({
+        name: `${c.first_name} ${c.last_name} (${c.contact_number})`,
+        value: c.contact_id,
+      }))
+      choices.push({ name: 'cancel', value: 'cancel' })
+      const { selectedContactId } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'selectedContactId',
+          message: 'Select contact to update',
+          choices,
+        },
+      ])
+      if (selectedContactId === 'cancel') return null
+      const contactToDelete = contacts.find(
+        (c) => c.contact_id === selectedContactId,
+      )
+
+      const { confirm } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirm',
+          message: `Are you sure you want to delete ${contactToDelete?.first_name} ${contactToDelete?.last_name}`,
+          default: true,
+        },
+      ])
+
+      if (!confirm) {
+        console.log('Delettion cancelled')
+        return null
+      }
+
+      const result = await ContactManager.delete(selectedContactId!, user_id)
+      return result
+    } catch (error) {
+      console.error('Error deleting contact', error)
+      return null
     }
-
-    const choices = contacts.map((c) => ({
-      name: `${c.first_name} ${c.last_name} (${c.contact_number})`,
-      value: c.contact_id,
-    }))
-
-    const { selectedContactId } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'selectedContactId',
-        message: 'Select contact to update',
-        choices,
-      },
-    ])
-    const contactToDelete = contacts.find(
-      (c) => c.contact_id === selectedContactId,
-    )
-
-    const { confirm } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'confirm',
-        message: `Are you sure you want to delete ${contactToDelete?.first_name} ${contactToDelete?.last_name}`,
-        default: true,
-      },
-    ])
-
-    if (!confirm) {
-      console.log('Delettion cancelled')
-      return
-    }
-
-    await ContactManager.delete(selectedContactId!, user_id)
   }
 
   static async update(
@@ -133,7 +179,6 @@ export class ContactManager implements IContact {
       if (fields.length === 0) return null
 
       const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ')
-
       const query = `
         UPDATE contacts 
         SET ${setClause} 
@@ -153,17 +198,18 @@ export class ContactManager implements IContact {
     }
   }
 
-  static async updateCLI(user_id: string) {
+  static async updateCLI(user_id: string): Promise<IContact | null> {
     const contacts = await ContactManager.list(user_id)
     if (contacts.length === 0) {
       console.log('No contacts found.')
-      return
+      return null
     }
 
     const choices = contacts.map((c) => ({
-      name: `${c.first_name} ${c.last_name} (${c.contact_number})`,
+      name: `${c.first_name} ${c.last_name} (${c.contact_number}) (${c.email})`,
       value: c.contact_id,
     }))
+
     choices.push({ name: 'cancel', value: 'cancel' })
     const { selectedContactId } = await inquirer.prompt([
       {
@@ -200,12 +246,23 @@ export class ContactManager implements IContact {
       },
       {
         type: 'input',
+        name: 'email',
+        message: 'Email Address:',
+        default: contactToUpdate?.email,
+      },
+      {
+        type: 'input',
         name: 'address',
         message: 'Address:',
         default: contactToUpdate?.address,
       },
     ])
 
-    await ContactManager.update(selectedContactId!, updatedData, user_id)
+    const result = await ContactManager.update(
+      selectedContactId!,
+      updatedData,
+      user_id,
+    )
+    return result
   }
 }

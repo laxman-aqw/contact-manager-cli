@@ -3,6 +3,7 @@ export interface IContact {
   first_name: string
   last_name: string
   contact_number: string
+  email: string
   address: string
   created_at?: Date
   user_id: string

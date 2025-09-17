@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     contact_number VARCHAR(20) NOT NULL,   
+    email VARCHAR(50) NOT NULL UNIQUE,
     address VARCHAR(255) NOT NULL,
     user_id UUID NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),

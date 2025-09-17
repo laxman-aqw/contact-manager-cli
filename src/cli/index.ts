@@ -5,7 +5,15 @@ import type { IUser } from '../models/types.js'
 import { ContactManager } from '../models/ContactManager.js'
 import { User } from '../models/User.js'
 import { validateUsername } from '../utils/userValidators.js'
-async function getUser(): Promise<IUser> {
+import {
+  valiateContactEmail,
+  valiateContactNumber,
+  validateFirstName,
+} from '../utils/contactValidators.js'
+import { findByUsername } from '../utils/helper.js'
+export async function getUser(): Promise<IUser> {
+  console.clear()
+
   const { username } = await inquirer.prompt([
     {
       type: 'input',
@@ -19,19 +27,17 @@ async function getUser(): Promise<IUser> {
 
   if (result) {
     console.log(`[INFO] Welcome back, ${username}!`)
-    // console.log(result)
     return result
   }
 
   const insert = await User.addUser(username)
   if (!insert) throw new Error('Failed to create user')
-  console.log('New user created!', insert)
+  console.log('New user created!')
   return insert
 }
 
 export async function main() {
   const user = await getUser()
-
   while (true) {
     const { action } = await inquirer.prompt([
       {
@@ -43,6 +49,7 @@ export async function main() {
           { name: 'List Contacts', value: 'list' },
           { name: 'Update Contact', value: 'update' },
           { name: 'Delete Contact', value: 'delete' },
+          { name: 'Delete Account', value: 'delete-account' },
           { name: 'Exit', value: 'exit' },
         ],
       },
@@ -54,10 +61,31 @@ export async function main() {
     }
 
     if (action === 'add') {
+      console.clear()
       const answers = await inquirer.prompt([
-        { type: 'input', name: 'first_name', message: 'First Name:' },
-        { type: 'input', name: 'last_name', message: 'Last Name:' },
-        { type: 'input', name: 'contact_number', message: 'Contact Number:' },
+        {
+          type: 'input',
+          name: 'first_name',
+          message: 'First Name:',
+          validate: validateFirstName,
+        },
+        {
+          type: 'input',
+          name: 'last_name',
+          message: 'Last Name:',
+        },
+        {
+          type: 'input',
+          name: 'contact_number',
+          message: 'Contact Number:',
+          validate: valiateContactNumber,
+        },
+        {
+          type: 'input',
+          name: 'email',
+          message: 'Email address:',
+          validate: valiateContactEmail,
+        },
         { type: 'input', name: 'address', message: 'Address:' },
       ])
 
@@ -65,6 +93,7 @@ export async function main() {
         answers.first_name,
         answers.last_name,
         answers.contact_number,
+        answers.email,
         answers.address,
         user.user_id!,
       )
@@ -72,6 +101,7 @@ export async function main() {
     }
 
     if (action === 'list') {
+      console.clear()
       const contacts = await ContactManager.list(user.user_id!)
       if (contacts.length === 0) {
         console.log('No contacts found.')
@@ -80,16 +110,25 @@ export async function main() {
           'first_name',
           'last_name',
           'contact_number',
+          'email',
           'address',
         ])
       }
     }
 
     if (action === 'update') {
+      console.clear()
+
       await ContactManager.updateCLI(user.user_id!)
     }
     if (action === 'delete') {
+      console.clear()
       await ContactManager.deleteCLI(user.user_id!)
+    }
+    if (action === 'delete-account') {
+      console.clear()
+      await User.deleteUserCLI(user.username!)
+      // console.log('the delete response is', delete_response)
     }
   }
 }
