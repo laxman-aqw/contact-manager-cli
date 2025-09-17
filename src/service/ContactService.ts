@@ -7,7 +7,10 @@ export class ContactService {
     const numberExists = await ContactRepository.findByContactNumber(
       contact.contact_number,
     )
-    if (emailExists || numberExists) {
+    if (emailExists) {
+      return null
+    }
+    if (numberExists) {
       return null
     }
 
@@ -23,6 +26,22 @@ export class ContactService {
     updates: Partial<IContact>,
     user_id: string,
   ) {
+    const emailExist = await ContactRepository.updateValidateEmail(
+      updates.email!,
+      contact_id,
+    )
+    if (emailExist) {
+      console.log('Contact with this email already exists.')
+      return null
+    }
+    const numberExist = await ContactRepository.updateValidateNumber(
+      updates.contact_number!,
+      contact_id,
+    )
+    if (numberExist) {
+      console.log('Contact with this number already exists.')
+      return null
+    }
     return await ContactRepository.update(contact_id, updates, user_id)
   }
 

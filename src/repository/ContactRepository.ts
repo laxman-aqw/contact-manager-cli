@@ -6,15 +6,69 @@ export class ContactRepository {
     const result = await pool.query('SELECT * FROM contacts WHERE email=$1', [
       email,
     ])
-    return result.rows[0] || null
+    if (result.rows.length > 0) {
+      // console.clear()
+      console.log('Account with this email already exists')
+      return true
+    }
+    return false
   }
 
   static async findByContactNumber(contact_number: string) {
     const result = await pool.query(
-      'SELECT * FROM contacts WHERE contact_number=$1',
+      'SELECT * FROM contacts WHERE contact_number = $1',
       [contact_number],
     )
-    return result.rows[0] || null
+    if (result.rows.length > 0) {
+      console.log('Account with this contact number already exists')
+
+      return true
+    }
+    return false
+  }
+
+  static async findByEmailForUpdate(email: string) {
+    const result = await pool.query('SELECT * FROM contacts WHERE email=$1', [
+      email,
+    ])
+    if (result.rows.length > 0) {
+      console.clear()
+      console.log('Account with this email already exists')
+      return true
+    }
+    return false
+  }
+  static async updateValidateEmail(email: string, selectedContactId: string) {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM contacts WHERE email =$1`,
+        [email],
+      )
+      if (result.rows.length > 0) {
+        if (result.rows[0].contact_id == selectedContactId) {
+          return false
+        }
+      }
+      return true
+    } catch (error) {
+      console.log(error)
+    }
+  }
+  static async updateValidateNumber(number: string, selectedContactId: string) {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM contacts WHERE contact_number =$1`,
+        [number],
+      )
+      if (result.rows.length > 0) {
+        if (result.rows[0].contact_id == selectedContactId) {
+          return false
+        }
+      }
+      return true
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   static async create(contact: IContact) {
@@ -30,9 +84,10 @@ export class ContactRepository {
           contact.user_id,
         ],
       )
+      console.log('Contact created')
       return result.rows[0]
     } catch (error) {
-      console.error(error)
+      console.error('contact not created', error)
     }
   }
 
@@ -66,6 +121,7 @@ export class ContactRepository {
         WHERE contact_id = $${fields.length + 1} AND user_id = $${fields.length + 2} 
         RETURNING *
       `
+
       const result = await pool.query(query, [...values, contact_id, user_id])
       if (result.rows.length === 0) {
         console.log('Contact not found or does not belong to this user.')
@@ -74,7 +130,7 @@ export class ContactRepository {
       console.log('Contact Updated!')
       return result.rows[0]
     } catch (error) {
-      console.error('Error updating contact:', error)
+      console.error(error)
     }
   }
 

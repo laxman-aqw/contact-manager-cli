@@ -95,9 +95,7 @@ export async function main() {
 
       const finalAnswer: IContact = { ...answers, user_id }
 
-      const result = await ContactService.addContact(finalAnswer)
-      console.clear()
-      console.log('New account added!')
+      await ContactService.addContact(finalAnswer)
     }
 
     if (action === 'list') {
@@ -173,15 +171,11 @@ export async function main() {
             default: contactToUpdate?.address,
           },
         ])
-        const contact = await ContactService.updateContact(
-          selectedContactId,
-          updates,
-          user_id,
-        )
+        await ContactService.updateContact(selectedContactId, updates, user_id)
       }
     }
     if (action === 'delete') {
-      console.clear()
+      // console.clear()
       try {
         const contacts = await ContactService.listContacts(user_id)
         if (contacts.length === 0) {
@@ -230,7 +224,7 @@ export async function main() {
       }
     }
     if (action === 'delete-account') {
-      console.clear()
+      // console.clear()
       try {
         const user = await UserService.findUser(username)
         if (!user) {
