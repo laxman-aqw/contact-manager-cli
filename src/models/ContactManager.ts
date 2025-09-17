@@ -40,6 +40,7 @@ export class ContactManager implements IContact {
     }
     return false
   }
+
   static async checkExistingContactUser(
     contact_number: string,
   ): Promise<boolean> {

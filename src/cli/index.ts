@@ -1,7 +1,7 @@
 import inquirer from 'inquirer'
 
 import { pool } from '../db/index.js'
-import type { IUser } from '../models/types.js'
+import type { IContact, IUser } from '../models/types.js'
 import { ContactManager } from '../models/ContactManager.js'
 import { User } from '../models/User.js'
 import { validateUsername } from '../utils/userValidators.js'
@@ -11,9 +11,9 @@ import {
   validateFirstName,
 } from '../utils/contactValidators.js'
 import { findByUsername } from '../utils/helper.js'
+import { ContactService } from '../service/ContactService.js'
 export async function getUser(): Promise<IUser> {
   console.clear()
-
   const { username } = await inquirer.prompt([
     {
       type: 'input',
@@ -38,6 +38,8 @@ export async function getUser(): Promise<IUser> {
 
 export async function main() {
   const user = await getUser()
+  console.log(user)
+  const user_id = user.user_id
   while (true) {
     const { action } = await inquirer.prompt([
       {
@@ -62,7 +64,7 @@ export async function main() {
 
     if (action === 'add') {
       console.clear()
-      const answers = await inquirer.prompt([
+      const answers: Omit<IContact, 'user_id'> = await inquirer.prompt([
         {
           type: 'input',
           name: 'first_name',
@@ -87,17 +89,12 @@ export async function main() {
           validate: valiateContactEmail,
         },
         { type: 'input', name: 'address', message: 'Address:' },
+        { type: 'input', name: 'user_id', message: 'User_id:' },
       ])
 
-      const contact = new ContactManager(
-        answers.first_name,
-        answers.last_name,
-        answers.contact_number,
-        answers.email,
-        answers.address,
-        user.user_id!,
-      )
-      await contact.add()
+      const finalAnswer: IContact = { ...answers, user_id }
+
+      const result = await ContactService.addContact(finalAnswer)
     }
 
     if (action === 'list') {
@@ -132,3 +129,42 @@ export async function main() {
     }
   }
 }
+
+// import inquirer from 'inquirer'
+// import { ContactService } from '../services/contactService.js'
+
+// export async function main(user_id: string) {
+//   while (true) {
+//     const { action } = await inquirer.prompt([
+//       {
+//         type: 'list',
+//         name: 'action',
+//         message: 'What do you want to do?',
+//         choices: ['Add Contact', 'List Contacts', 'Exit'],
+//       },
+//     ])
+
+//     if (action === 'Exit') {
+//       console.log('Goodbye 👋')
+//       process.exit(0)
+//     }
+
+//     if (action === 'Add Contact') {
+//       const answers = await inquirer.prompt([
+//         { type: 'input', name: 'first_name', message: 'First Name:' },
+//         { type: 'input', name: 'last_name', message: 'Last Name:' },
+//         { type: 'input', name: 'contact_number', message: 'Contact Number:' },
+//         { type: 'input', name: 'email', message: 'Email Address:' },
+//         { type: 'input', name: 'address', message: 'Address:' },
+//       ])
+
+//       const result = await ContactService.addContact({ ...answers, user_id })
+//       if (result) console.log('Contact Added!')
+//     }
+
+//     if (action === 'List Contacts') {
+//       const contacts = await ContactService.listContacts(user_id)
+//       console.table(contacts)
+//     }
+//   }
+// }
