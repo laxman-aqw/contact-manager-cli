@@ -1,13 +1,14 @@
 import inquirer from 'inquirer'
 import type { IContact, IUser } from '../models/types.js'
-import { validateUsername } from '../utils/userValidators.js'
-import {
-  valiateContactEmail,
-  valiateContactNumber,
-  validateFirstName,
-} from '../utils/contactValidators.js'
+
 import { ContactService } from '../service/ContactService.js'
 import { UserService } from '../service/UserService.js'
+import {
+  contactSchema,
+  usernameSchema,
+  zodValidate,
+} from '../schemas/AddContactSchemas.js'
+
 export async function getUser(): Promise<IUser> {
   console.clear()
   const { username } = await inquirer.prompt([
@@ -15,7 +16,7 @@ export async function getUser(): Promise<IUser> {
       type: 'input',
       name: 'username',
       message: 'Enter your username:',
-      validate: validateUsername,
+      validate: zodValidate(usernameSchema),
     },
   ])
 
@@ -64,24 +65,25 @@ async function actionFunction(user_id: string, username: string) {
         type: 'input',
         name: 'first_name',
         message: 'First Name:',
-        validate: validateFirstName,
+        validate: zodValidate(contactSchema.shape.first_name),
       },
       {
         type: 'input',
         name: 'last_name',
         message: 'Last Name:',
+        validate: zodValidate(contactSchema.shape.last_name),
       },
       {
         type: 'input',
         name: 'contact_number',
         message: 'Contact Number:',
-        validate: valiateContactNumber,
+        validate: zodValidate(contactSchema.shape.contact_number),
       },
       {
         type: 'input',
         name: 'email',
         message: 'Email address:',
-        validate: valiateContactEmail,
+        validate: zodValidate(contactSchema.shape.email),
       },
       { type: 'input', name: 'address', message: 'Address:' },
     ])
@@ -140,33 +142,35 @@ async function actionFunction(user_id: string, username: string) {
           name: 'first_name',
           message: 'First Name:',
           default: contactToUpdate?.first_name,
-          validate: validateFirstName,
+          validate: zodValidate(contactSchema.shape.first_name),
         },
         {
           type: 'input',
           name: 'last_name',
           message: 'Last Name:',
           default: contactToUpdate?.last_name,
+          validate: zodValidate(contactSchema.shape.last_name),
         },
         {
           type: 'input',
           name: 'contact_number',
           message: 'Contact Number:',
           default: contactToUpdate?.contact_number,
-          validate: valiateContactNumber,
+          validate: zodValidate(contactSchema.shape.contact_number),
         },
         {
           type: 'input',
           name: 'email',
           message: 'Email Address:',
           default: contactToUpdate?.email,
-          validate: valiateContactEmail,
+          validate: zodValidate(contactSchema.shape.email),
         },
         {
           type: 'input',
           name: 'address',
           message: 'Address:',
           default: contactToUpdate?.address,
+          validate: zodValidate(contactSchema.shape.address),
         },
       ])
       await ContactService.updateContact(selectedContactId, updates, user_id)
